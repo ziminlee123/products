@@ -15,6 +15,7 @@ export default function ProductDetailPage() {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [newMessage, setNewMessage] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -25,6 +26,20 @@ export default function ProductDetailPage() {
     }
   ]);
   const chatRef = useRef(null);
+
+  // 자주 사용하는 이모지들
+  const quickEmojis = ['👍', '😊', '😢', '😍', '🤔', '👏', '🙏', '❤️'];
+  const frequentEmojis = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
+    '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
+    '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
+    '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳',
+    '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️',
+    '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤',
+    '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙',
+    '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✊', '👊',
+    '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤'
+  ];
 
   useEffect(() => {
     const productId = parseInt(params.id);
@@ -54,8 +69,9 @@ export default function ProductDetailPage() {
 
     setMessages(prev => [...prev, message]);
     setNewMessage('');
+    setShowEmojiPicker(false);
 
-    // 판매자 자동 응답 (3초 후)
+    // 판매자 자동 응답 (2초 후)
     setTimeout(() => {
       const responses = [
         '네, 확인했습니다! 언제 거래 가능하신가요?',
@@ -75,6 +91,41 @@ export default function ProductDetailPage() {
 
       setMessages(prev => [...prev, autoReply]);
     }, 2000);
+  };
+
+  // 이모지 추가
+  const addEmoji = (emoji) => {
+    setNewMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  // 빠른 이모지 전송
+  const sendQuickEmoji = (emoji) => {
+    const message = {
+      id: messages.length + 1,
+      sender: 'buyer',
+      text: emoji,
+      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      isRead: false
+    };
+
+    setMessages(prev => [...prev, message]);
+
+    // 판매자 이모지 응답 (1초 후)
+    setTimeout(() => {
+      const emojiResponses = ['👍', '😊', '🙏', '❤️', '😄'];
+      const randomEmoji = emojiResponses[Math.floor(Math.random() * emojiResponses.length)];
+      
+      const autoReply = {
+        id: messages.length + 2,
+        sender: 'seller',
+        text: randomEmoji,
+        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        isRead: true
+      };
+
+      setMessages(prev => [...prev, autoReply]);
+    }, 1000);
   };
 
   // 공유 기능들
@@ -276,9 +327,27 @@ export default function ProductDetailPage() {
             <span className="text-orange-500 text-xl font-bold">나눔💛</span>
           ) : (
             <>
-              <span className="text-xl font-bold text-gray-900">
-                {product.price?.toLocaleString()}원
-              </span>
+              <div className="flex flex-col">
+                {product.minPrice && product.maxPrice && product.minPrice !== product.maxPrice ? (
+                  <>
+                    <span className="text-xl font-bold text-gray-900">
+                      {product.minPrice.toLocaleString()}원 ~ {product.maxPrice.toLocaleString()}원
+                    </span>
+                    <span className="text-sm text-orange-600 font-medium">가격 협상 가능</span>
+                  </>
+                ) : product.minPrice && !product.maxPrice ? (
+                  <>
+                    <span className="text-xl font-bold text-gray-900">
+                      {product.minPrice.toLocaleString()}원부터
+                    </span>
+                    <span className="text-sm text-orange-600 font-medium">최소 가격</span>
+                  </>
+                ) : (
+                  <span className="text-xl font-bold text-gray-900">
+                    {(product.maxPrice || product.minPrice || product.price)?.toLocaleString()}원
+                  </span>
+                )}
+              </div>
               {product.status === '예약중' && (
                 <span className="bg-green-600 text-white text-xs px-2 py-1 rounded">예약중</span>
               )}
@@ -330,6 +399,21 @@ export default function ProductDetailPage() {
             </button>
           </div>
 
+          {/* 빠른 이모지 */}
+          <div className="px-4 py-2 border-b border-gray-100 bg-gray-50">
+            <div className="flex gap-2 overflow-x-auto">
+              {quickEmojis.map((emoji, index) => (
+                <button
+                  key={index}
+                  onClick={() => sendQuickEmoji(emoji)}
+                  className="flex-shrink-0 w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-lg"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* 채팅 메시지 */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={chatRef}>
             {messages.map((message) => (
@@ -350,9 +434,32 @@ export default function ProductDetailPage() {
             ))}
           </div>
 
+          {/* 이모지 피커 */}
+          {showEmojiPicker && (
+            <div className="border-t border-gray-200 bg-white p-4 max-h-40 overflow-y-auto">
+              <div className="grid grid-cols-8 gap-2">
+                {frequentEmojis.map((emoji, index) => (
+                  <button
+                    key={index}
+                    onClick={() => addEmoji(emoji)}
+                    className="w-8 h-8 hover:bg-gray-100 rounded flex items-center justify-center text-lg"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 메시지 입력 */}
           <div className="p-4 border-t border-gray-200 bg-white">
             <div className="flex gap-2">
+              <button
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="p-2 text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg"
+              >
+                😊
+              </button>
               <input
                 type="text"
                 value={newMessage}
@@ -385,27 +492,21 @@ export default function ProductDetailPage() {
             </svg>
           </button>
           
-          <div className="flex-1 flex gap-2">
-            <button 
-              onClick={() => setShowChat(!showChat)}
-              className={`flex-1 ${showChat ? 'bg-gray-500 hover:bg-gray-600' : 'bg-blue-500 hover:bg-blue-600'} text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2`}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              {showChat ? '채팅 닫기' : '채팅하기'}
-            </button>
-            
-            <button 
-              onClick={() => {
+          <button 
+            onClick={() => {
+              setShowChat(!showChat);
+              if (!showChat) {
+                // 채팅창 열릴 때 기본 메시지 자동 입력
                 setNewMessage('안녕하세요, 구매 가능할까요?');
-                if (!showChat) setShowChat(true);
-              }}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition-colors"
-            >
-              구매문의
-            </button>
-          </div>
+              }
+            }}
+            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            {showChat ? '채팅 닫기' : '판매자와 채팅하기'}
+          </button>
         </div>
       </div>
     </div>

@@ -7,6 +7,8 @@ export default function ProductCard({ product }) {
     id,
     title,
     price,
+    minPrice,
+    maxPrice,
     description,
     image,
     location,
@@ -19,6 +21,39 @@ export default function ProductCard({ product }) {
 
   const handleProductClick = () => {
     router.push(`/products/${id}`);
+  };
+
+  // 가격 표시 로직
+  const getPriceDisplay = () => {
+    if (isNanum) {
+      return <span className="text-orange-500 font-semibold text-sm">나눔💛</span>;
+    }
+
+    // 가격 범위가 설정된 경우
+    if (minPrice && maxPrice && minPrice !== maxPrice) {
+      const priceText = `${minPrice.toLocaleString()}원 ~ ${maxPrice.toLocaleString()}원`;
+      return (
+        <div className="flex flex-col">
+          <span className="text-gray-900 font-semibold text-sm">{priceText}</span>
+          <span className="text-xs text-orange-600">가격 협상 가능</span>
+        </div>
+      );
+    }
+    
+    // 하나의 가격만 설정된 경우
+    const displayPrice = maxPrice || minPrice || price || 0;
+    const priceText = `${displayPrice.toLocaleString()}원`;
+    
+    if (minPrice && !maxPrice) {
+      return (
+        <div className="flex flex-col">
+          <span className="text-gray-900 font-semibold text-sm">{priceText}부터</span>
+          <span className="text-xs text-orange-600">최소 가격</span>
+        </div>
+      );
+    }
+    
+    return <span className="text-gray-900 font-semibold text-sm">{priceText}</span>;
   };
 
   return (
@@ -71,19 +106,13 @@ export default function ProductCard({ product }) {
           {/* 가격 및 상태 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {isNanum ? (
-                <span className="text-orange-500 font-semibold text-sm">나눔💛</span>
-              ) : status === '예약중' ? (
-                <div className="flex items-center gap-1">
+              {status === '예약중' && !isNanum ? (
+                <div className="flex items-center gap-2">
                   <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded">예약중</span>
-                  <span className="text-gray-900 font-semibold text-sm">
-                    {price?.toLocaleString()}원
-                  </span>
+                  {getPriceDisplay()}
                 </div>
               ) : (
-                <span className="text-gray-900 font-semibold text-sm">
-                  {price?.toLocaleString()}원
-                </span>
+                getPriceDisplay()
               )}
             </div>
 
@@ -111,4 +140,4 @@ export default function ProductCard({ product }) {
       </div>
     </div>
   );
-} 
+}

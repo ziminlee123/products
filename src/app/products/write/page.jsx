@@ -10,7 +10,8 @@ export default function WriteProductPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    price: '',
+    minPrice: '',
+    maxPrice: '',
     images: [],
     saleType: 'sell' // 'sell' or 'share'
   });
@@ -66,9 +67,19 @@ export default function WriteProductPage() {
       alert('상품 설명을 입력해주세요.');
       return;
     }
-    if (formData.saleType === 'sell' && !formData.price.trim()) {
-      alert('가격을 입력해주세요.');
-      return;
+    if (formData.saleType === 'sell') {
+      if (!formData.minPrice.trim() && !formData.maxPrice.trim()) {
+        alert('최소 가격 또는 최대 가격 중 하나는 입력해주세요.');
+        return;
+      }
+      
+      const minPrice = parseInt(formData.minPrice) || 0;
+      const maxPrice = parseInt(formData.maxPrice) || 0;
+      
+      if (minPrice > 0 && maxPrice > 0 && minPrice > maxPrice) {
+        alert('최소 가격은 최대 가격보다 클 수 없습니다.');
+        return;
+      }
     }
     if (formData.images.length === 0) {
       alert('상품 이미지를 한 장 이상 업로드해주세요.');
@@ -79,7 +90,10 @@ export default function WriteProductPage() {
     const newProductData = {
       title: formData.title,
       description: formData.description,
-      price: formData.saleType === 'share' ? 0 : parseInt(formData.price) || 0,
+      minPrice: formData.saleType === 'share' ? 0 : parseInt(formData.minPrice) || 0,
+      maxPrice: formData.saleType === 'share' ? 0 : parseInt(formData.maxPrice) || 0,
+      // 기존 호환성을 위해 price 필드도 유지 (minPrice 또는 maxPrice 중 하나)
+      price: formData.saleType === 'share' ? 0 : (parseInt(formData.maxPrice) || parseInt(formData.minPrice) || 0),
       images: formData.images,
       isNanum: formData.saleType === 'share'
     };
@@ -104,6 +118,21 @@ export default function WriteProductPage() {
     "실사용 거의 없어요.",
     "원가 대비 저렴하게 판매해요."
   ];
+
+  // 가격을 천단위로 포맷팅하는 함수
+  const formatPrice = (price) => {
+    if (!price) return '';
+    return parseInt(price).toLocaleString();
+  };
+
+  // 가격 입력시 천단위 콤마 처리
+  const handlePriceChange = (e, field) => {
+    const value = e.target.value.replace(/[^0-9]/g, ''); // 숫자만 추출
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -233,7 +262,7 @@ export default function WriteProductPage() {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => setFormData(prev => ({ ...prev, saleType: 'sell', price: '' }))}
+              onClick={() => setFormData(prev => ({ ...prev, saleType: 'sell', minPrice: '', maxPrice: '' }))}
               className={`flex-1 py-3 px-4 rounded-lg border transition-colors ${
                 formData.saleType === 'sell'
                   ? 'bg-orange-50 border-orange-500 text-orange-600'
@@ -244,7 +273,7 @@ export default function WriteProductPage() {
             </button>
             <button
               type="button"
-              onClick={() => setFormData(prev => ({ ...prev, saleType: 'share', price: '0' }))}
+              onClick={() => setFormData(prev => ({ ...prev, saleType: 'share', minPrice: '0', maxPrice: '0' }))}
               className={`flex-1 py-3 px-4 rounded-lg border transition-colors ${
                 formData.saleType === 'share'
                   ? 'bg-orange-50 border-orange-500 text-orange-600'
@@ -256,27 +285,91 @@ export default function WriteProductPage() {
           </div>
         </div>
 
-        {/* 가격 입력 (판매하기 선택시에만) */}
+        {/* 가격 범위 입력 (판매하기 선택시에만) */}
         {formData.saleType === 'sell' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              가격 *
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              희망 가격 범위 *
             </label>
-            <div className="relative">
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleInputChange}
-                placeholder="가격을 입력해주세요"
-                className="w-full px-3 py-3 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-              />
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                원
-              </span>
+            
+            {/* 가격 범위 설명 */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium text-blue-700">가격 협상이 가능해요!</span>
+              </div>
+              <p className="text-xs text-blue-600">
+                최소~최대 가격을 설정하면 구매자가 가격 범위를 확인할 수 있어요. 
+                하나의 가격만 입력해도 됩니다.
+              </p>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              * 배송비를 포함한 가격으로 입력해주세요.
+
+            <div className="space-y-3">
+              {/* 최소 가격 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  최소 가격 (선택)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formatPrice(formData.minPrice)}
+                    onChange={(e) => handlePriceChange(e, 'minPrice')}
+                    placeholder="예: 50,000"
+                    className="w-full px-3 py-3 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                    원
+                  </span>
+                </div>
+              </div>
+
+              {/* 가격 범위 연결선 */}
+              <div className="flex items-center justify-center">
+                <div className="w-8 h-px bg-gray-300"></div>
+                <span className="mx-2 text-gray-500 text-sm">~</span>
+                <div className="w-8 h-px bg-gray-300"></div>
+              </div>
+
+              {/* 최대 가격 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  최대 가격 (선택)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formatPrice(formData.maxPrice)}
+                    onChange={(e) => handlePriceChange(e, 'maxPrice')}
+                    placeholder="예: 70,000"
+                    className="w-full px-3 py-3 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                    원
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 가격 범위 미리보기 */}
+            {(formData.minPrice || formData.maxPrice) && (
+              <div className="mt-3 p-2 bg-gray-50 rounded-lg">
+                <span className="text-xs text-gray-600">상품 목록에 표시될 가격: </span>
+                <span className="font-medium text-gray-900">
+                  {formData.minPrice && formData.maxPrice 
+                    ? `${formatPrice(formData.minPrice)}원 ~ ${formatPrice(formData.maxPrice)}원`
+                    : formData.minPrice 
+                      ? `${formatPrice(formData.minPrice)}원부터`
+                      : `${formatPrice(formData.maxPrice)}원`
+                  }
+                </span>
+              </div>
+            )}
+
+            <p className="text-xs text-gray-500 mt-2">
+              * 두 가격 모두 입력하면 가격 범위가 표시되고, 하나만 입력해도 됩니다.
             </p>
           </div>
         )}
