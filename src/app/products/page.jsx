@@ -12,7 +12,13 @@ export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [currentLocation, setCurrentLocation] = useState('합정동');
   const [showLocationMenu, setShowLocationMenu] = useState(false);
+  const [showPriceFilter, setShowPriceFilter] = useState(false);
+  const [priceFilter, setPriceFilter] = useState({
+    minPrice: '',
+    maxPrice: ''
+  });
   const locationRef = useRef(null);
+  const priceFilterRef = useRef(null);
 
   // URL에서 검색어 가져오기
   const searchQuery = searchParams.get('search') || '';
@@ -53,6 +59,9 @@ export default function ProductsPage() {
       if (locationRef.current && !locationRef.current.contains(event.target)) {
         setShowLocationMenu(false);
       }
+      if (priceFilterRef.current && !priceFilterRef.current.contains(event.target)) {
+        setShowPriceFilter(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -78,6 +87,20 @@ export default function ProductsPage() {
       }
     }
 
+    // 가격 필터링
+    if (priceFilter.minPrice || priceFilter.maxPrice) {
+      filtered = filtered.filter(product => {
+        // 나눔 상품은 가격 필터링에서 제외
+        if (product.isNanum) return false;
+        
+        const productPrice = product.maxPrice || product.minPrice || product.price || 0;
+        const minPrice = priceFilter.minPrice ? parseInt(priceFilter.minPrice) : 0;
+        const maxPrice = priceFilter.maxPrice ? parseInt(priceFilter.maxPrice) : Infinity;
+        
+        return productPrice >= minPrice && productPrice <= maxPrice;
+      });
+    }
+
     // 검색어 필터링
     if (searchQuery.trim()) {
       filtered = filtered.filter(product =>
@@ -97,9 +120,42 @@ export default function ProductsPage() {
     setShowLocationMenu(false);
   };
 
+  // 가격 필터 적용
+  const applyPriceFilter = () => {
+    setShowPriceFilter(false);
+  };
+
+  // 가격 필터 초기화
+  const clearPriceFilter = () => {
+    setPriceFilter({
+      minPrice: '',
+      maxPrice: ''
+    });
+  };
+
+  // 모든 필터 클리어
+  const clearAllFilters = () => {
+    setPriceFilter({
+      minPrice: '',
+      maxPrice: ''
+    });
+    setSelectedCategory('전체');
+    router.push('/products');
+  };
+
   // 검색어 클리어
   const clearSearch = () => {
     router.push('/products');
+  };
+
+  // 가격 필터 입력 처리
+  const handlePriceChange = (type, value) => {
+    // 숫자만 입력 허용
+    const numericValue = value.replace(/[^0-9]/g, '');
+    setPriceFilter(prev => ({
+      ...prev,
+      [type]: numericValue
+    }));
   };
 
   return (
@@ -209,21 +265,106 @@ export default function ProductsPage() {
           </div>
         )}
         
-        {/* 카테고리 탭 */}
-        <div className="flex px-4 pb-3">
-          {categories.map((category, index) => (
+        {/* 필터 및 카테고리 탭 */}
+        <div className="flex items-center justify-between px-4 pb-3">
+          {/* 가격 필터 버튼 */}
+          <div className="relative" ref={priceFilterRef}>
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 mr-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                selectedCategory === category
-                  ? 'bg-gray-200 text-gray-900'
+              onClick={() => setShowPriceFilter(!showPriceFilter)}
+              className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                (priceFilter.minPrice || priceFilter.maxPrice)
+                  ? 'bg-orange-100 text-orange-600 border border-orange-200'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              } ${index === 0 ? 'bg-gray-300 text-gray-900' : ''}`}
+              }`}
             >
-              {category}
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
+              </svg>
+              가격
+              {(priceFilter.minPrice || priceFilter.maxPrice) && (
+                <span className="ml-1 bg-orange-500 text-white text-xs rounded-full w-2 h-2"></span>
+              )}
             </button>
-          ))}
+
+            {/* 가격 필터 토글 메뉴 */}
+            {showPriceFilter && (
+              <div className="absolute top-12 left-0 bg-white rounded-lg shadow-lg border border-gray-200 z-20 w-80">
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-gray-900">가격 범위</h3>
+                    <button
+                      onClick={clearPriceFilter}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      초기화
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-600 mb-1">최소 가격</label>
+                      <input
+                        type="text"
+                        placeholder="0"
+                        value={priceFilter.minPrice}
+                        onChange={(e) => handlePriceChange('minPrice', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div className="text-gray-400 mt-5">~</div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-600 mb-1">최대 가격</label>
+                      <input
+                        type="text"
+                        placeholder="제한없음"
+                        value={priceFilter.maxPrice}
+                        onChange={(e) => handlePriceChange('maxPrice', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowPriceFilter(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={applyPriceFilter}
+                      className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600 transition-colors"
+                    >
+                      적용
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 rounded-b-lg">
+                  <p className="text-xs text-gray-500 text-center">
+                    💡 나눔 상품은 가격 필터에서 제외됩니다
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 카테고리 탭 */}
+          <div className="flex">
+            {categories.map((category, index) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 mr-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                  selectedCategory === category
+                    ? 'bg-gray-200 text-gray-900'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                } ${index === 0 ? 'bg-gray-300 text-gray-900' : ''}`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -246,9 +387,9 @@ export default function ProductsPage() {
                 : '우리 동네에 첫 게시글을 올려보세요!'
               }
             </p>
-            {searchQuery && (
+            {(searchQuery || selectedCategory !== '전체' || priceFilter.minPrice || priceFilter.maxPrice) && (
               <button
-                onClick={clearSearch}
+                onClick={clearAllFilters}
                 className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
               >
                 전체 상품 보기
@@ -258,10 +399,10 @@ export default function ProductsPage() {
         ) : (
           <>
             {/* 검색/필터링 결과 헤더 */}
-            {(searchQuery || selectedCategory !== '전체') && (
+            {(searchQuery || selectedCategory !== '전체' || priceFilter.minPrice || priceFilter.maxPrice) && (
               <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
                     {searchQuery && (
                       <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
                         검색: {searchQuery}
@@ -270,6 +411,11 @@ export default function ProductsPage() {
                     {selectedCategory !== '전체' && (
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                         {selectedCategory}
+                      </span>
+                    )}
+                    {(priceFilter.minPrice || priceFilter.maxPrice) && (
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                        가격: {priceFilter.minPrice ? `${parseInt(priceFilter.minPrice).toLocaleString()}원` : '0원'} ~ {priceFilter.maxPrice ? `${parseInt(priceFilter.maxPrice).toLocaleString()}원` : '제한없음'}
                       </span>
                     )}
                   </div>
