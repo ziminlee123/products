@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -14,12 +15,12 @@ export default function Home() {
         </div>
         
         <div className="text-center">
-          <a 
+          <Link 
             href="/products" 
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 transform hover:scale-105"
           >
             상품 목록 보기
-          </a>
+          </Link>
         </div>
       </div>
     </div>
