@@ -1,17 +1,21 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ProductCard from '../../components/ProductCard';
 import { useProducts } from '../../context/ProductsContext';
 
 export default function ProductsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { products } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [currentLocation, setCurrentLocation] = useState('합정동');
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [showLocationMenu, setShowLocationMenu] = useState(false);
   const locationRef = useRef(null);
+
+  // URL에서 검색어 가져오기
+  const searchQuery = searchParams.get('search') || '';
 
   const categories = ['전체', '동네소식', '냉방기기', '중고거래'];
   
@@ -87,23 +91,15 @@ export default function ProductsPage() {
 
   const filteredProducts = getFilteredProducts();
 
-  // 검색 활성화/비활성화
-  const toggleSearch = () => {
-    setIsSearchActive(!isSearchActive);
-    if (isSearchActive) {
-      setSearchQuery('');
-    }
-  };
-
-  // 검색어 클리어
-  const clearSearch = () => {
-    setSearchQuery('');
-  };
-
   // 지역 선택
   const selectLocation = (location) => {
     setCurrentLocation(location);
     setShowLocationMenu(false);
+  };
+
+  // 검색어 클리어
+  const clearSearch = () => {
+    router.push('/products');
   };
 
   return (
@@ -175,8 +171,8 @@ export default function ProductsPage() {
               </svg>
             </button>
             <button 
-              onClick={toggleSearch}
-              className={`text-gray-700 transition-colors ${isSearchActive ? 'text-orange-500' : ''}`}
+              onClick={() => router.push('/products/search')}
+              className="text-gray-700 hover:text-orange-500 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -191,46 +187,25 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* 검색창 */}
-        {isSearchActive && (
-          <div className="px-4 pb-3 border-t border-gray-100">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="상품명을 검색해보세요..."
-                className="w-full px-4 py-3 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                autoFocus
-              />
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-                {searchQuery && (
-                  <button
-                    onClick={clearSearch}
-                    className="p-1 text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-                <button
-                  onClick={toggleSearch}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </button>
+        {/* 검색 결과 표시 */}
+        {searchQuery && (
+          <div className="px-4 pb-3 border-t border-gray-100 bg-blue-50">
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="text-sm text-blue-700">
+                  '<span className="font-medium">{searchQuery}</span>' 검색 결과 {filteredProducts.length}개
+                </span>
               </div>
+              <button
+                onClick={clearSearch}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                검색 해제
+              </button>
             </div>
-            
-            {/* 검색 결과 안내 */}
-            {searchQuery && (
-              <div className="mt-2 text-sm text-gray-600">
-                '<span className="font-medium">{searchQuery}</span>' 검색 결과 {filteredProducts.length}개
-              </div>
-            )}
           </div>
         )}
         
@@ -261,11 +236,11 @@ export default function ProductsPage() {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               {searchQuery 
-                ? '검색 결과가 없어요' 
+                ? `'${searchQuery}' 검색 결과가 없어요` 
                 : '등록된 게시글이 없어요'
               }
             </h3>
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-600 text-sm mb-4">
               {searchQuery 
                 ? '다른 검색어로 시도해보세요!' 
                 : '우리 동네에 첫 게시글을 올려보세요!'
@@ -274,9 +249,9 @@ export default function ProductsPage() {
             {searchQuery && (
               <button
                 onClick={clearSearch}
-                className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
               >
-                검색어 지우기
+                전체 상품 보기
               </button>
             )}
           </div>
@@ -314,7 +289,7 @@ export default function ProductsPage() {
 
       {/* 플로팅 작성 버튼 */}
       <button 
-        onClick={() => window.location.href = '/products/write'}
+        onClick={() => router.push('/products/write')}
         className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors duration-200"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
