@@ -7,8 +7,6 @@ export default function ProductCard({ product }) {
     id,
     title,
     price,
-    minPrice,
-    maxPrice,
     description,
     image,
     location,
@@ -23,36 +21,13 @@ export default function ProductCard({ product }) {
     router.push(`/products/${id}`);
   };
 
-  // 가격 표시 로직
+  // 가격 표시 로직 - 심플 버전
   const getPriceDisplay = () => {
-    if (isNanum) {
+    if (isNanum || price === 0) {
       return <span className="text-orange-500 font-semibold text-sm">나눔💛</span>;
     }
-
-    // 가격 범위가 설정된 경우
-    if (minPrice && maxPrice && minPrice !== maxPrice) {
-      const priceText = `${minPrice.toLocaleString()}원 ~ ${maxPrice.toLocaleString()}원`;
-      return (
-        <div className="flex flex-col">
-          <span className="text-gray-900 font-semibold text-sm">{priceText}</span>
-          <span className="text-xs text-orange-600">가격 협상 가능</span>
-        </div>
-      );
-    }
     
-    // 하나의 가격만 설정된 경우
-    const displayPrice = maxPrice || minPrice || price || 0;
-    const priceText = `${displayPrice.toLocaleString()}원`;
-    
-    if (minPrice && !maxPrice) {
-      return (
-        <div className="flex flex-col">
-          <span className="text-gray-900 font-semibold text-sm">{priceText}부터</span>
-          <span className="text-xs text-orange-600">최소 가격</span>
-        </div>
-      );
-    }
-    
+    const priceText = `${price.toLocaleString()}원`;
     return <span className="text-gray-900 font-semibold text-sm">{priceText}</span>;
   };
 
@@ -98,9 +73,9 @@ export default function ProductCard({ product }) {
             <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
             </svg>
-            <span>{location}</span>
+            <span>{location || '합정동'}</span>
             <span className="mx-1">•</span>
-            <span>{timeAgo}</span>
+            <span>{timeAgo || '방금 전'}</span>
           </div>
 
           {/* 가격 및 상태 */}

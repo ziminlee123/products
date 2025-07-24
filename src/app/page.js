@@ -14,13 +14,34 @@ export default function Home() {
           </p>
         </div>
         
-        <div className="text-center">
-          <Link 
-            href="/products" 
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 transform hover:scale-105"
-          >
-            상품 목록 보기
-          </Link>
+        <div className="text-center space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link 
+              href="/products" 
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 transform hover:scale-105"
+            >
+              상품 목록 보기
+            </Link>
+            
+            <div className="flex gap-3">
+              <Link 
+                href="/auth/login" 
+                className="inline-block bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+              >
+                로그인
+              </Link>
+              <Link 
+                href="/auth/signup" 
+                className="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+              >
+                회원가입
+              </Link>
+            </div>
+          </div>
+          
+          <p className="text-sm text-gray-500 mt-4">
+            👆 회원가입하고 상품을 등록해보세요!
+          </p>
         </div>
       </div>
     </div>

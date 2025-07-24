@@ -1,0 +1,117 @@
+-- public.users 테이블 생성 (auth.users와 연동, 샘플 데이터 없음)
+CREATE TABLE public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT UNIQUE NOT NULL,
+  nickname TEXT,
+  profile_image_url TEXT,
+  phone TEXT,
+  address TEXT,
+  district TEXT, -- 구 (예: 마포구, 강남구)
+  neighborhood TEXT, -- 동 (예: 합정동, 상수동)
+  is_verified BOOLEAN DEFAULT FALSE,
+  rating DECIMAL(3,2) DEFAULT 0.0, -- 평점 (0.00 ~ 5.00)
+  rating_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 인덱스 생성
+CREATE INDEX idx_users_email ON public.users(email);
+CREATE INDEX idx_users_nickname ON public.users(nickname);
+CREATE INDEX idx_users_district ON public.users(district);
+CREATE INDEX idx_users_neighborhood ON public.users(neighborhood);
+
+-- Row Level Security (RLS) 활성화
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- 모든 사람이 사용자 기본 정보를 볼 수 있도록 (개인정보 제외)
+CREATE POLICY "Anyone can view basic user info" ON public.users 
+FOR SELECT USING (true);
+
+-- 본인만 자신의 정보를 수정할 수 있도록
+CREATE POLICY "Users can update own profile" ON public.users 
+FOR UPDATE USING (auth.uid() = id);
+
+-- 회원가입 시 자동으로 users 테이블에 레코드 생성하는 함수
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, nickname)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'nickname', split_part(NEW.email, '@', 1))
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- auth.users에 새 사용자가 생성되면 자동으로 public.users에도 생성
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 업데이트 시간 자동 갱신 함수
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- users 테이블 업데이트 시 updated_at 자동 갱신
+CREATE TRIGGER update_users_updated_at
+  BEFORE UPDATE ON public.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+-- 사용자 평점 업데이트 함수
+CREATE OR REPLACE FUNCTION update_user_rating(
+  user_id UUID,
+  new_rating DECIMAL
+)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.users 
+  SET 
+    rating = (rating * rating_count + new_rating) / (rating_count + 1),
+    rating_count = rating_count + 1,
+    updated_at = NOW()
+  WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 주변 사용자 찾기 함수 (같은 구 또는 동네)
+CREATE OR REPLACE FUNCTION get_nearby_users(
+  current_user_id UUID,
+  search_district TEXT DEFAULT NULL,
+  search_neighborhood TEXT DEFAULT NULL
+)
+RETURNS TABLE(
+  id UUID,
+  nickname TEXT,
+  profile_image_url TEXT,
+  district TEXT,
+  neighborhood TEXT,
+  rating DECIMAL,
+  rating_count INTEGER
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    u.id,
+    u.nickname,
+    u.profile_image_url,
+    u.district,
+    u.neighborhood,
+    u.rating,
+    u.rating_count
+  FROM public.users u
+  WHERE 
+    u.id != current_user_id
+    AND (search_district IS NULL OR u.district = search_district)
+    AND (search_neighborhood IS NULL OR u.neighborhood = search_neighborhood)
+  ORDER BY u.rating DESC, u.rating_count DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER; 
