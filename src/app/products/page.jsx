@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import ProductCard from '../../components/ProductCard';
 import { useProducts } from '../../context/ProductsContext';
 
 export default function ProductsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { products } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [currentLocation, setCurrentLocation] = useState('합정동');
@@ -17,11 +16,18 @@ export default function ProductsPage() {
     minPrice: '',
     maxPrice: ''
   });
+  const [searchQuery, setSearchQuery] = useState('');
   const locationRef = useRef(null);
   const priceFilterRef = useRef(null);
 
-  // URL에서 검색어 가져오기
-  const searchQuery = searchParams.get('search') || '';
+  // 클라이언트에서 URL 검색 파라미터 가져오기
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const search = urlParams.get('search') || '';
+      setSearchQuery(search);
+    }
+  }, []);
 
   const categories = ['전체', '동네소식', '냉방기기', '중고거래'];
   
@@ -140,11 +146,13 @@ export default function ProductsPage() {
       maxPrice: ''
     });
     setSelectedCategory('전체');
+    setSearchQuery('');
     router.push('/products');
   };
 
   // 검색어 클리어
   const clearSearch = () => {
+    setSearchQuery('');
     router.push('/products');
   };
 
@@ -444,4 +452,4 @@ export default function ProductsPage() {
       </button>
     </div>
   );
-} 
+}
